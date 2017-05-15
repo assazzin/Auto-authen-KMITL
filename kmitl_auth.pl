@@ -1,19 +1,44 @@
 use LWP::UserAgent;
 use HTTP::Cookies;
 
-$username=shift;
-$password=shift;
+#########################################
+#Edit these setting as default
+
+#Edit your username
+$username='';
+#Edit your password
+$password='';
+#Change value to '1' to create log.txt file or '0' to not.
+$log=1;
+
+#########################################
+
 system("clear");
 
 print "[+] ------------------------------------------------------ [+]\n";
-print "[ ]                Script By Ohm CSAG 2016                 [ ]\n";
-print "[ ]               Create date: 26 July 2016                [ ]\n";
+print "[ ]                                                        [ ]\n";
+print "[ ]             ██████╗███████╗ █████╗  ██████╗            [ ]\n";
+print "[ ]            ██╔════╝██╔════╝██╔══██╗██╔════╝            [ ]\n";
+print "[ ]            ██║     ███████╗███████║██║  ███╗           [ ]\n";
+print "[ ]            ██║     ╚════██║██╔══██║██║   ██║           [ ]\n";
+print "[ ]            ╚██████╗███████║██║  ██║╚██████╔╝           [ ]\n";
+print "[ ]             ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝            [ ]\n";
+print "[ ]                                                        [ ]\n";
+print "[ ]               Create date: 15 May 2017                 [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]   Usage: perl kmitl_auth.pl username password          [ ]\n";
-print "[ ]          Can use only Generation1                      [ ]\n";
+print "[ ]   This script can maintain both gen1 and gen2          [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[+] ------------------------------------------------------ [+]\n\n";
-exit unless($username && $password);
+if(scalar(@ARGV) > 0) { $username=$ARGV[0]; }
+if(scalar(@ARGV) > 1) { $password=$ARGV[1]; }
+
+unless($username && $password) {
+	print " Username or Password not found !!\n\n";
+	print " Usage : perl $0 [username] [password]\n";
+	print " You can also embed your Username,Password by edit few lines of this script.\n\n";
+	exit;
+}
 
 %ssl_opts=(
 	verify_hostname => 0,
@@ -23,17 +48,42 @@ $cookie_jar=HTTP::Cookies->new(autosave=>1, hide_cookie2=>1);
 $agent=LWP::UserAgent->new(
 	agent => 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0',
 	ssl_opts => {%ssl_opts},
-	timeout => 30,
+	timeout => 1,
+	max_redirect => 0,
 	cookie_jar => $cookie_jar
 );
 
-login(1);
-
+$count = 1;
 while(1) {
+
 	$time=localtime;
-	print "[$time] Waiting 3 minutes..\n";
-	sleep 180;
-	heartbeat();
+	$checkConnection = checkConnection();
+	if($checkConnection == 1) {
+		print "[$time] Connection OK...\n";
+	}
+	elsif($checkConnection eq 'nac.kmitl.ac.th') {
+		if($log) {
+			print "[$time] Require nac.kmitl.ac.th\n";
+			open FILE,">>log.txt";
+			print FILE "$time login nac\n";
+			close FILE;
+		}
+		login(1);
+		$count = 1;
+		redo;
+	}
+	else {
+		print "[$time] Connection down!!!\n";
+		print "$checkConnection";
+	}
+	if($count >= 15) {
+		heartbeat();
+		$count = 1;
+		redo;
+	}
+	sleep 60;
+	$count++;
+
 }
 
 
@@ -41,6 +91,16 @@ while(1) {
 
 
 
+sub checkConnection {
+	$content = $agent->get('http://detectportal.firefox.com/success.txt')->as_string;
+	if($content=~/nac\.kmitl\.ac\.th/) {
+		return 'nac.kmitl.ac.th';
+	}
+	elsif($content=~/success\n/) {
+		return 1;
+	}
+	return $content;
+}
 sub checkHTTPStatus {
 	my $content=$_[0];
 	my $http_code=$_[1];
@@ -63,7 +123,6 @@ sub login {
 		'realm' => 'adminTestGroup',
 		'tz_offset' => '420',
 		'btnSubmit' => 'Sign in',
-		'realm' => '%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B9%81%E0%B8%AD%E0%B8%84%E0%B9%80%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B9%8C%E0%B9%80%E0%B8%81%E0%B9%88%E0%B8%B2+%28Generation1%29'#ระบบแอคเคาท์เก่า (Generation1)'
 	])->as_string;
 
 	while(1) {
@@ -97,8 +156,6 @@ sub heartbeat {
 		'heartbeat' => 1,
 		'clientlessEnabled' => 1,
 		'sessionExtension' => 0,
-		'notification_originalmsg' => '%3Cfont%20color%3D%26%2334%3B%23FF0000%26%2334%3B%20size%20%3D4%3E%u0E1B%u0E23%u0E30%u0E01%u0E32%u0E28%3A%20%u0E40%u0E23%u0E35%u0E22%u0E19%u0E1C%u0E39%u0E49%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E23%u0E30%u0E1A%u0E1A%20Internet%20%u0E02%u0E2D%u0E07%u0E2A%u0E16%u0E32%u0E1A%u0E31%u0E19%20%u0E2F%20%20%20%u0E17%u0E35%u0E48%u0E43%u0E0A%u0E49%20Web%20Browser%20%u0E17%u0E35%u0E48%u0E23%u0E30%u0E1A%u0E1A%20Authen%20%u0E02%u0E2D%u0E07%u0E2A%u0E16%u0E32%u0E1A%u0E31%u0E19%u0E2F%u0E23%u0E2D%u0E07%u0E23%u0E31%u0E1A%u0E04%u0E37%u0E2D%20IE10%20%u0E2B%u0E23%u0E37%u0E2D%u0E15%u0E48%u0E33%u0E01%u0E27%u0E48%u0E32%20%3CBR%3E%20%20Mozilla%2C%20Firefox%2C%20Chrome%20%u0E17%u0E32%u0E07%u0E2A%u0E33%u0E19%u0E31%u0E01%u0E1A%u0E23%u0E34%u0E01%u0E32%u0E23%u0E04%u0E2D%u0E21%u0E1E%u0E34%u0E27%u0E40%u0E15%u0E2D%u0E23%u0E4C%u0E02%u0E2D%u0E07%u0E2D%u0E20%u0E31%u0E22%u0E43%u0E19%u0E04%u0E27%u0E32%u0E21%u0E44%u0E21%u0E48%u0E2A%u0E30%u0E14%u0E27%u0E01%20%20%3C/FONT%3E%3CBR%3E%3CBR%3E%20%20%20%20%3Cfont%20size%3D4%3E%20%3CBR%3E%u0E2B%u0E19%u0E49%u0E32%20Page%20%u0E19%u0E35%u0E49%20%u0E23%u0E30%u0E1A%u0E1A%u0E22%u0E37%u0E19%u0E22%u0E31%u0E19%u0E15%u0E31%u0E27%u0E15%u0E19%u0E02%u0E2D%u0E07%u0E2A%u0E16%u0E32%u0E1A%u0E31%u0E19%u0E2F%20%u0E43%u0E0A%u0E49%u0E43%u0E19%u0E01%u0E32%u0E23%u0E15%u0E23%u0E27%u0E08%u0E2A%u0E2D%u0E1A%u0E2A%u0E16%u0E32%u0E19%u0E30%u0E02%u0E2D%u0E07%u0E40%u0E04%u0E23%u0E37%u0E48%u0E2D%u0E07%u0E17%u0E35%u0E48%u0E17%u0E33%u0E01%u0E32%u0E23%20Login%20%u0E14%u0E31%u0E07%u0E19%u0E31%u0E49%u0E19%u0E43%u0E19%u0E01%u0E32%u0E23%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E2D%u0E34%u0E19%u0E40%u0E15%u0E2D%u0E23%u0E4C%u0E40%u0E19%u0E47%u0E15%3CBR%3E%u0E15%u0E49%u0E2D%u0E07%u0E40%u0E1B%u0E34%u0E14%u0E2B%u0E19%u0E49%u0E32%20Page%20%u0E19%u0E35%u0E49%u0E44%u0E27%u0E49%20%u0E21%u0E34%u0E09%u0E30%u0E19%u0E31%u0E49%u0E19%u0E17%u0E48%u0E32%u0E19%u0E08%u0E30%u0E44%u0E21%u0E48%u0E2A%u0E32%u0E21%u0E32%u0E23%u0E16%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E2D%u0E34%u0E19%u0E40%u0E15%u0E2D%u0E23%u0E4C%u0E40%u0E19%u0E47%u0E15%u0E44%u0E14%u0E49%20%20%20%u0E40%u0E1E%u0E37%u0E48%u0E2D%u0E1B%u0E49%u0E2D%u0E07%u0E01%u0E31%u0E19%u0E01%u0E32%u0E23%u0E19%u0E33%u0E40%u0E04%u0E23%u0E37%u0E48%u0E2D%u0E07%u0E17%u0E35%u0E48%20Login%20%u0E14%u0E49%u0E27%u0E22%20User%20%u0E02%u0E2D%u0E07%u0E17%u0E48%u0E32%u0E19%3CBR%3E%u0E44%u0E1B%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%20%u0E40%u0E21%u0E37%u0E48%u0E2D%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E40%u0E2A%u0E23%u0E47%u0E08%u0E41%u0E25%u0E49%u0E27%u0E01%u0E23%u0E38%u0E13%u0E32%20Logout%20%28%u0E2D%u0E2D%u0E01%u0E08%u0E32%u0E01%u0E23%u0E30%u0E1A%u0E1A%u0E17%u0E31%u0E19%u0E17%u0E35%29%20%u0E2B%u0E23%u0E37%u0E2D%20%u0E1B%u0E34%u0E14%u0E2B%u0E19%u0E49%u0E32%20page%20%u0E19%u0E35%u0E49%u0E40%u0E04%u0E23%u0E37%u0E48%u0E2D%u0E07%u0E02%u0E2D%u0E07%u0E17%u0E48%u0E32%u0E19%u0E08%u0E30%u0E2A%u0E32%u0E21%u0E32%u0E23%u0E16%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E44%u0E14%u0E49%u0E2D%u0E35%u0E01%205%20%u0E19%u0E32%u0E17%u0E35%20%20%20%3C/FONT%3E%3CBR%3E%3CBR%3E%20%20%20%20%3Cfont%20size%3D4%3E%20%u0E40%u0E1E%u0E37%u0E48%u0E2D%u0E43%u0E2B%u0E49%u0E01%u0E32%u0E23%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E40%u0E04%u0E23%u0E37%u0E48%u0E2D%u0E07%u0E02%u0E2D%u0E17%u0E48%u0E32%u0E19%u0E44%u0E21%u0E48%u0E23%u0E1A%u0E01%u0E27%u0E19%u0E01%u0E32%u0E23%u0E43%u0E0A%u0E49%u0E07%u0E32%u0E19%u0E40%u0E04%u0E23%u0E37%u0E2D%u0E02%u0E48%u0E32%u0E22%u0E02%u0E2D%u0E07%u0E1C%u0E39%u0E49%u0E2D%u0E37%u0E48%u0E19%20%20%u0E02%u0E2D%u0E43%u0E2B%u0E49%u0E17%u0E48%u0E32%u0E19%u0E15%u0E23%u0E27%u0E08%u0E2A%u0E2D%u0E1A%u0E42%u0E1B%u0E23%u0E41%u0E01%u0E23%u0E21%u0E15%u0E48%u0E32%u0E07%20%u0E46%20%u0E17%u0E35%u0E48%u0E15%u0E34%u0E14%u0E15%u0E31%u0E49%u0E07%u0E1A%u0E19%u0E40%u0E04%u0E23%u0E37%u0E48%u0E2D%u0E07%u0E02%u0E2D%u0E07%u0E17%u0E48%u0E32%u0E19%3CBR%3E%u0E04%u0E27%u0E23%u0E16%u0E39%u0E01%u0E15%u0E49%u0E2D%u0E07%u0E25%u0E34%u0E02%u0E2A%u0E34%u0E17%u0E18%u0E34%20%u0E04%u0E27%u0E23%u0E15%u0E34%u0E14%u0E15%u0E31%u0E49%u0E07%u0E23%u0E30%u0E1A%u0E1A%u0E1B%u0E49%u0E2D%u0E07%u0E44%u0E27%u0E23%u0E31%u0E2A%u0E41%u0E25%u0E30%20firewall%20%20%u0E41%u0E25%u0E30%u0E44%u0E21%u0E48%u0E04%u0E27%u0E23%u0E25%u0E07%u0E42%u0E1B%u0E23%u0E41%u0E01%u0E23%u0E21%u0E17%u0E35%u0E48%u0E40%u0E2A%u0E35%u0E48%u0E22%u0E07%u0E15%u0E48%u0E2D%u0E01%u0E32%u0E23%u0E17%u0E33%u0E43%u0E2B%u0E49%u0E23%u0E30%u0E1A%u0E1A%u0E40%u0E04%u0E23%u0E37%u0E2D%u0E02%u0E48%u0E32%u0E22%u0E2A%u0E48%u0E27%u0E19%u0E01%u0E25%u0E32%u0E07%u0E40%u0E01%u0E34%u0E14%u0E1B%u0E31%u0E0D%u0E2B%u0E32%3CBR%3E%20%u0E44%u0E21%u0E48%u0E01%u0E23%u0E30%u0E17%u0E33%u0E1C%u0E34%u0E14%u0E15%u0E32%u0E21%u0E1E%u0E23%u0E30%u0E23%u0E32%u0E0A%u0E1A%u0E31%u0E0D%u0E0D%u0E31%u0E15%u0E34%u0E27%u0E48%u0E32%u0E14%u0E49%u0E27%u0E22%u0E01%u0E32%u0E23%u0E01%u0E23%u0E30%u0E17%u0E33%u0E04%u0E27%u0E32%u0E21%u0E1C%u0E34%u0E14%u0E40%u0E01%u0E35%u0E48%u0E22%u0E27%u0E01%u0E31%u0E1A%u0E04%u0E2D%u0E21%u0E1E%u0E34%u0E27%u0E40%u0E15%u0E2D%u0E23%u0E4C%20%3CBR%3E%20%20%3Cbr%3E%3Cbr%3E',
-		'instruction_originalmsg' => 'f3b9cc645ef4244c3add378418459f1e'
 	])->as_string;
 
 	$content=$agent->get('https://nac.kmitl.ac.th/dana/home/infranet.cgi')->as_string;
