@@ -48,7 +48,7 @@ $cookie_jar=HTTP::Cookies->new(autosave=>1, hide_cookie2=>1);
 $agent=LWP::UserAgent->new(
 	agent => 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0',
 	ssl_opts => {%ssl_opts},
-	timeout => 1,
+	timeout => 15,
 	max_redirect => 0,
 	cookie_jar => $cookie_jar
 );
