@@ -61,11 +61,11 @@ while(1) {
 	if($checkConnection == 1) {
 		print "[$time] Connection OK...\n";
 	}
-	elsif($checkConnection eq 'nac.kmitl.ac.th') {
+	elsif($checkConnection eq 'mylogin.kmitl.ac.th') {
 		if($log) {
-			print "[$time] Require nac.kmitl.ac.th\n";
+			print "[$time] Require mylogin.kmitl.ac.th\n";
 			open FILE,">>log.txt";
-			print FILE "$time login nac\n";
+			print FILE "$time login iam\n";
 			close FILE;
 		}
 		login(1);
@@ -75,11 +75,6 @@ while(1) {
 	else {
 		print "[$time] Connection down!!!\n";
 		print "$checkConnection";
-	}
-	if($count >= 15) {
-		heartbeat();
-		$count = 1;
-		redo;
 	}
 	sleep 60;
 	$count++;
@@ -93,8 +88,8 @@ while(1) {
 
 sub checkConnection {
 	$content = $agent->get('http://detectportal.firefox.com/success.txt')->as_string;
-	if($content=~/nac\.kmitl\.ac\.th/) {
-		return 'nac.kmitl.ac.th';
+	if($content=~/mylogin\.kmitl\.ac\.th/) {
+		return 'mylogin.kmitl.ac.th';
 	}
 	elsif($content=~/success\n/) {
 		return 1;
@@ -117,12 +112,25 @@ sub getLocation {
 }
 sub login {
 	my $force=$_[0];
-	$content=$agent->post('https://161.246.254.213/dana-na/auth/url_default/login.cgi',[
-		'username' => $username,
-		'password' => $password,
-		'realm' => 'adminTestGroup',
-		'tz_offset' => '420',
-		'btnSubmit' => 'Sign in',
+	$content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!login.action',[
+		"userName" => $username,
+		"password" => $password,
+		"validCode" => "",
+		"authLan" => "en",
+		"hasValidateNextUpdatePassword" => "true",
+		"rememberPwd" => "false",
+		"browserFlag" => "en",
+		"hasCheckCode" => "false",
+		"checkcode" => "",
+		"saveTime" => "14",
+		"autoLogin" => "false",
+		"userMac" => "",
+		"isBoardPage" => "false",
+		"disablePortalMac" => "false",
+		"overdueHour" => "0",
+		"overdueMinute" => "0",
+		"isAccountMsgAuth" => "",
+		"validCodeForAuth" => ""
 	])->as_string;
 
 	while(1) {
@@ -131,50 +139,8 @@ sub login {
 			print " [+] 302 => $location\n";
 			$content=$agent->get($location)->as_string;
 		} else {
-			if($content=~/You have the maximum number of sessions running/i && $force==1) {
-				($SessionToEnd)=$content=~/SessionToEnd" value="(.*?)"/;
-				($FormDataStr)=$content=~/FormDataStr" value="(.*?)"/;
-				$content=$agent->post('https://161.246.254.213/dana-na/auth/url_default/login.cgi',[
-					'SessionToEnd' => $SessionToEnd,
-					'btnContinueSessionsToEnd' => 'Continue',
-					'FormDataStr' => $FormDataStr
-				])->as_string;
-				print " You have the maximum number of session running.\n";
-				redo;
-			}
-			elsif($content=~/You have the maximum number of sessions running/i) {
-				print " You have the maximum number of session running. But script do not force login.\n";
-			}
 			last;
 		}
 	}
 	print " Finish Sign in\n\n";
-}
-sub heartbeat {
-	print " Sending heartbeat..\n";
-	$agent->post('https://nac.kmitl.ac.th/dana/home/infranet.cgi?',[
-		'heartbeat' => 1,
-		'clientlessEnabled' => 1,
-		'sessionExtension' => 0,
-	])->as_string;
-
-	$content=$agent->get('https://nac.kmitl.ac.th/dana/home/infranet.cgi')->as_string;
-	while(1) {
-		if(checkHTTPStatus($content,302)) {
-			$location=getLocation($content);
-			print " [+] 302 => $location\n";
-			$content=$agent->get($location)->as_string;
-		} else {
-			unless($content=~/Logged-in as/) {
-				login(0);
-			}
-			last;
-		}
-	}
-}
-sub saveLog {
-	my $name=$_[0];
-	open FILE ,">debug$name.html";
-	print FILE $content;
-	close FILE;
 }
