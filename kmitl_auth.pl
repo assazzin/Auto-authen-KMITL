@@ -13,7 +13,8 @@ $log=1;
 
 #########################################
 
-system("clear");
+
+$^O=~/^MS/ ? system("cls") : system("clear");
 
 print "[+] ------------------------------------------------------ [+]\n";
 print "[ ]                                                        [ ]\n";
@@ -25,9 +26,9 @@ print "[ ]            ╚██████╗███████║██║ 
 print "[ ]             ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝            [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]               Create date: 15 May 2017                 [ ]\n";
+print "[ ]              Lasted modified: 3 Feb 2018                [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]   Usage: perl kmitl_auth.pl username password          [ ]\n";
-print "[ ]   This script can maintain both gen1 and gen2          [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[+] ------------------------------------------------------ [+]\n\n";
 if(scalar(@ARGV) > 0) { $username=$ARGV[0]; }
@@ -53,14 +54,19 @@ $agent=LWP::UserAgent->new(
 	cookie_jar => $cookie_jar
 );
 
-$count = 1;
+login();
 while(1) {
-
 	$time=localtime;
 	$checkConnection = checkConnection();
+
+	# Connection fine
 	if($checkConnection == 1) {
-		print "[$time] Connection OK...\n";
+		print "[$time] Connection OK. Wait for $heartbeatInterval seconds.\n";
+		select undef,undef,undef,$heartbeatInterval;
+		heatbeat();
 	}
+
+	# Require to login
 	elsif($checkConnection eq 'mylogin.kmitl.ac.th') {
 		if($log) {
 			print "[$time] Require mylogin.kmitl.ac.th\n";
@@ -68,16 +74,16 @@ while(1) {
 			print FILE "$time login iam\n";
 			close FILE;
 		}
-		login(1);
-		$count = 1;
+		login();
 		redo;
 	}
+
+	# Unexpect result
 	else {
 		print "[$time] Connection down!!!\n";
 		print "$checkConnection";
+		sleep 1;
 	}
-	sleep 60;
-	$count++;
 
 }
 
@@ -87,7 +93,8 @@ while(1) {
 
 
 sub checkConnection {
-	$content = $agent->get('http://detectportal.firefox.com/success.txt')->as_string;
+	my $content = $agent->get('http://detectportal.firefox.com/success.txt')->as_string;
+	($ip) = $content =~ /"ip":"(.*?)"/;
 	if($content=~/mylogin\.kmitl\.ac\.th/) {
 		return 'mylogin.kmitl.ac.th';
 	}
@@ -111,36 +118,46 @@ sub getLocation {
 	return $content;
 }
 sub login {
-	my $force=$_[0];
+	# Send authen request
 	$content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!login.action',[
 		"userName" => $username,
-		"password" => $password,
-		"validCode" => "",
-		"authLan" => "en",
-		"hasValidateNextUpdatePassword" => "true",
-		"rememberPwd" => "false",
-		"browserFlag" => "en",
-		"hasCheckCode" => "false",
-		"checkcode" => "",
-		"saveTime" => "14",
-		"autoLogin" => "false",
-		"userMac" => "",
-		"isBoardPage" => "false",
-		"disablePortalMac" => "false",
-		"overdueHour" => "0",
-		"overdueMinute" => "0",
-		"isAccountMsgAuth" => "",
-		"validCodeForAuth" => ""
+		"password" => $password
 	])->as_string;
-
-	while(1) {
-		if(checkHTTPStatus($content,302)) {
-			$location=getLocation($content);
-			print " [+] 302 => $location\n";
-			$content=$agent->get($location)->as_string;
-		} else {
-			last;
-		}
+	($token) = $content =~ /"token":"token=(.*?)"/;
+#	while(1) {
+#		if(checkHTTPStatus($content,302)) {
+#			$location=getLocation($content);
+#			print " [+] 302 => $location\n";
+#			$content=$agent->get($location)->as_string;
+#		} else {
+#			last;
+#		}
+#	}
+	
+	# Sync authen result
+	my $content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!syncPortalAuthResult.action',[
+		"browserFlag" => "en",
+		"clientIp" => $ip
+	])->as_string;
+	($accessStatus) = $content =~ /"accessStatus":(\d+)/;
+	($webHeatbeatPeriod) = $content =~ /"webHeatbeatPeriod":(\d+)/;
+	$heartbeatInterval = $webHeatbeatPeriod/1000;
+	if($accessStatus == 200) {
+		print " [+] Trying to sign in and get token $token\n\n";
 	}
-	print " Finish Sign in\n\n";
+}
+sub heatbeat {
+	my $content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!hearbeat.action',[
+		"userName" => $username,
+		"clientIp" => $ip
+	],"X-XSRF-TOKEN" => $token)->as_string;
+	(my $data) = $content =~ /"data":(.*?),/;
+	if ($data eq "null") {
+		print " [+] Heatbeat OK...\n\n";
+		$heartbeatInterval = $webHeatbeatPeriod/1000;
+	}
+	else {
+		print " [+] Heatbeat failed with $data\n\n";
+	}
+
 }
