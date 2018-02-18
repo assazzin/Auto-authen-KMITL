@@ -69,7 +69,7 @@ while(1) {
 	# Require to login
 	elsif($checkConnection eq 'mylogin.kmitl.ac.th') {
 		if($log) {
-			print "[$time] Require mylogin.kmitl.ac.th\n";
+			print " [$time] Require mylogin.kmitl.ac.th\n";
 			open FILE,">>log.txt";
 			print FILE "$time login iam\n";
 			close FILE;
@@ -94,7 +94,6 @@ while(1) {
 
 sub checkConnection {
 	my $content = $agent->get('http://detectportal.firefox.com/success.txt')->as_string;
-	($ip) = $content =~ /"ip":"(.*?)"/;
 	if($content=~/mylogin\.kmitl\.ac\.th/) {
 		return 'mylogin.kmitl.ac.th';
 	}
@@ -121,9 +120,28 @@ sub login {
 	# Send authen request
 	$content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!login.action',[
 		"userName" => $username,
-		"password" => $password
+		"password" => $password,
+		"validCode" => "",
+		"authLan" => "en",
+		"hasValidateNextUpdatePassword" => "true",
+		"rememberPwd" => "false",
+		"browserFlag" => "en",
+		"hasCheckCode" => "false",
+		"checkcode" => "",
+		"saveTime" => "14",
+		"autoLogin" => "false",
+		"userMac" => "",
+		"isBoardPage" => "false",
+		"disablePortalMac" => "false",
+		"overdueHour" => "0",
+		"overdueMinute" => "0",
+		"isAccountMsgAuth" => "",
+		"validCodeForAuth" => "",
+		"clientIp" => ""
 	])->as_string;
 	($token) = $content =~ /"token":"token=(.*?)"/;
+	($ip) = $content =~ /"ip":"(.*?)"/;
+	($account) = $content =~ /"account":"(.*?)"/;
 #	while(1) {
 #		if(checkHTTPStatus($content,302)) {
 #			$location=getLocation($content);
@@ -143,21 +161,22 @@ sub login {
 	($webHeatbeatPeriod) = $content =~ /"webHeatbeatPeriod":(\d+)/;
 	$heartbeatInterval = $webHeatbeatPeriod/1000;
 	if($accessStatus == 200) {
-		print " [+] Trying to sign in and get token $token\n\n";
+		print " [+] Trying to sign in and get token $token\n";
+		print " [+] Your IP address is $ip\n\n";
 	}
 }
 sub heatbeat {
 	my $content=$agent->post('https://mylogin.kmitl.ac.th:8445/PortalServer/Webauth/webAuthAction!hearbeat.action',[
-		"userName" => $username,
+		"userName" => $account,
 		"clientIp" => $ip
 	],"X-XSRF-TOKEN" => $token)->as_string;
 	(my $data) = $content =~ /"data":(.*?),/;
-	if ($data eq "null") {
+	if ($data eq "\"ONLINE\"") {
 		print " [+] Heatbeat OK...\n\n";
 		$heartbeatInterval = $webHeatbeatPeriod/1000;
 	}
 	else {
-		print " [+] Heatbeat failed with $data\n\n";
+		print " [+] Heatbeat failed with $data response\n\n";
 	}
 
 }
