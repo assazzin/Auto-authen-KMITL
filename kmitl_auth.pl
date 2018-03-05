@@ -26,7 +26,7 @@ print "[ ]            ╚██████╗███████║██║ 
 print "[ ]             ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝            [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]               Create date: 15 May 2017                 [ ]\n";
-print "[ ]              Lasted modified: 18 Feb 2018              [ ]\n";
+print "[ ]              Lasted modified: 3 Feb 2018                [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]   Usage: perl kmitl_auth.pl username password          [ ]\n";
 print "[ ]                                                        [ ]\n";
@@ -54,14 +54,18 @@ $agent=LWP::UserAgent->new(
 	cookie_jar => $cookie_jar
 );
 
+START_OVER:
 login();
+$resetTimer=time+(8*60*60);	#8 Hours
 while(1) {
+	$remainTimeToReset = $resetTimer - time;
+	goto START_OVER if($remainTimeToReset <= 480); #8 minutes
 	$time=localtime;
 	$checkConnection = checkConnection();
 
 	# Connection fine
 	if($checkConnection == 1) {
-		print "[$time] Connection OK. Wait for $heartbeatInterval seconds.\n";
+		print "[$time] Connection OK. Wait for $heartbeatInterval seconds. ",int($remainTimeToReset/60)," mins to start over.\n";
 		select undef,undef,undef,$heartbeatInterval;
 		heatbeat();
 	}
