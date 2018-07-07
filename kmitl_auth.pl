@@ -26,7 +26,7 @@ print "[ ]            ╚██████╗███████║██║ 
 print "[ ]             ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝            [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]               Create date: 15 May 2017                 [ ]\n";
-print "[ ]              Lasted modified: 1 Mar 2018                [ ]\n";
+print "[ ]              Lasted modified: 8 Jul 2018                [ ]\n";
 print "[ ]                                                        [ ]\n";
 print "[ ]   Usage: perl kmitl_auth.pl username password          [ ]\n";
 print "[ ]                                                        [ ]\n";
