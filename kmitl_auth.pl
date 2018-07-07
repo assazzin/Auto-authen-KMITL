@@ -181,6 +181,7 @@ sub heatbeat {
 	}
 	else {
 		print " [+] Heatbeat failed with $data response\n\n";
+		goto START_OVER;
 	}
 
 }
